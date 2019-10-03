@@ -53,7 +53,7 @@ spec:
   selector:
     app: requestbin
   ports:
-  - port: 80
+  - port: 8000
 
 ---
 
@@ -76,9 +76,42 @@ spec:
     spec:
       containers:
       - name: requestbin
-        image: crccheck/requestbin@sha256:a3dfaa2c2ace47cdcd2add65621e8ad343e5b58819878f6a42f80fd25e9321e5
+        image: '819234847174.dkr.ecr.us-east-1.amazonaws.com/requestbin:latest'
         ports:
-        - containerPort: 80
+          - containerPort: 8000
         env:
-        - name: REDIS_URL
-          value: redis://redis:6379/0
+          - name: REALM
+            value: prod
+          - name: REDIS_URL
+            value: redis://redis:6379/0
+
+---
+
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  annotations:
+    certmanager.k8s.io/acme-challenge-type: dns01
+    certmanager.k8s.io/acme-dns01-provider: dns
+    certmanager.k8s.io/cluster-issuer: letsencrypt-production-dns
+    external-dns.alpha.kubernetes.io/hostname: requestbin.communitysift.com
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/ingress.class: nginx
+  labels:
+    app.kubernetes.io/managed-by: spinnaker
+    app.kubernetes.io/name: requestbin
+  name: requestbin
+  namespace: requestbin
+spec:
+  rules:
+    - host: requestbin.communitysift.com
+      http:
+        paths:
+          - backend:
+              serviceName: requestbin
+              servicePort: 8000
+            path: /
+  tls:
+    - hosts:
+        - requestbin.communitysift.com
+      secretName: requestbin-communitysift-com
